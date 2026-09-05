@@ -4,64 +4,65 @@ import shutil
 import subprocess
 
 
-def get_windows_info():
-    print("=== SYSTEM INFORMATION ===")
-    print(f"Operating system : {platform.system()} {platform.release()}")
-    print(f"Computer         : {platform.node()}")
-    print(f"Architecture     : {platform.machine()}")
-    print(f"Python version   : {platform.python_version()}")
+def run_powershell(command):
+    try:
+        result = subprocess.run(
+            ["powershell", "-Command", command],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        return result.stdout.strip()
+    except Exception:
+        return "Unknown"
+
+
+def get_system_info():
+    print("=== SYSTEM ===")
+    print(f"OS           : {platform.system()} {platform.release()}")
+    print(f"Computer     : {platform.node()}")
+    print(f"Architecture : {platform.machine()}")
+    print(f"Python       : {platform.python_version()}")
     print()
 
 
 def get_cpu_info():
     print("=== CPU ===")
 
-    try:
-        result = subprocess.run(
-            [
-                "powershell",
-                "-Command",
-                "(Get-CimInstance Win32_Processor).Name"
-            ],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+    cpu = run_powershell(
+        "(Get-CimInstance Win32_Processor).Name"
+    )
 
-        cpu = result.stdout.strip()
+    cores = os.cpu_count()
 
-        if cpu:
-            print(f"Processor : {cpu}")
-        else:
-            print("Processor : Unable to detect")
-    except Exception:
-        print("Processor : Unable to detect")
+    print(f"Processor    : {cpu}")
+    print(f"CPU cores    : {cores}")
+    print()
 
-    print(f"CPU cores : {os.cpu_count()}")
+
+def get_gpu_info():
+    print("=== GPU ===")
+
+    gpu = run_powershell(
+        "(Get-CimInstance Win32_VideoController).Name"
+    )
+
+    print(f"Graphics     : {gpu}")
     print()
 
 
 def get_memory_info():
-    print("=== MEMORY ===")
+    print("=== RAM ===")
+
+    memory = run_powershell(
+        "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"
+    )
 
     try:
-        result = subprocess.run(
-            [
-                "powershell",
-                "-Command",
-                "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"
-            ],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-
-        memory = int(result.stdout.strip())
-        memory_gb = memory / (1024 ** 3)
-
-        print(f"Total RAM : {memory_gb:.1f} GB")
-    except Exception:
-        print("RAM      : Unable to detect")
+        memory_gb = int(memory) / (1024 ** 3)
+        print(f"Total RAM    : {memory_gb:.1f} GB")
+    except (ValueError, TypeError):
+        print("Total RAM    : Unknown")
 
     print()
 
@@ -71,24 +72,21 @@ def get_disk_info():
 
     total, used, free = shutil.disk_usage(os.path.abspath(os.sep))
 
-    total_gb = total / (1024 ** 3)
-    used_gb = used / (1024 ** 3)
-    free_gb = free / (1024 ** 3)
-
-    print(f"Total : {total_gb:.1f} GB")
-    print(f"Used  : {used_gb:.1f} GB")
-    print(f"Free  : {free_gb:.1f} GB")
+    print(f"Total        : {total / (1024 ** 3):.1f} GB")
+    print(f"Used         : {used / (1024 ** 3):.1f} GB")
+    print(f"Free         : {free / (1024 ** 3):.1f} GB")
     print()
 
 
 def main():
-    print("================================")
-    print("          PC-TOOLKIT")
-    print("================================")
+    print("=" * 40)
+    print("           PC-TOOLKIT")
+    print("=" * 40)
     print()
 
-    get_windows_info()
+    get_system_info()
     get_cpu_info()
+    get_gpu_info()
     get_memory_info()
     get_disk_info()
 
